@@ -20,6 +20,7 @@ func buildCliCommands() *cli.Command {
 	var ignoreErrors bool
 	var includeZero bool
 	var autoFix bool
+	var minConfidence float64
 	var err error
 
 	return &cli.Command{
@@ -52,7 +53,7 @@ func buildCliCommands() *cli.Command {
 						return fullFile
 					})
 
-					result := CalculateFilesOrientation(files)
+					result := CalculateFilesOrientationWithOptions(files, Options{MinConfidence: minConfidence})
 					media, err = getMedia(result, len(files), output)
 					if err != nil {
 						return err
@@ -103,7 +104,8 @@ func buildCliCommands() *cli.Command {
 						return nil
 					}
 
-					result, total := CalculateDirectoryOrientation(directory, mediaType, recursive)
+					result, total := CalculateDirectoryOrientationWithOptions(directory, mediaType, recursive,
+						Options{MinConfidence: minConfidence})
 					media, err = getMedia(result, total, output)
 					if err != nil {
 						return err
@@ -145,12 +147,35 @@ func buildCliCommands() *cli.Command {
 				DefaultText: "false",
 				Destination: &autoFix,
 			},
+			&cli.FloatFlag{
+				Name:        "min-confidence",
+				Aliases:     []string{"mc"},
+				Usage:       "minimum confidence (0-1) to trust a rotation; below it media is flagged for manual review",
+				Value:       0,
+				DefaultText: "0",
+				Destination: &minConfidence,
+				Validator: func(f float64) error {
+					if f < 0 || f > 1 {
+						return fmt.Errorf("min confidence must be between 0 and 1")
+					}
+
+					return nil
+				},
+			},
 		},
 		Action: func(ctx context.Context, command *cli.Command) error {
 			return fmt.Errorf("command missing; try 'mediaorient --help' for more information")
 		},
 		After: func(ctx context.Context, command *cli.Command) error {
-			charm.PrintReport(media, includeZero)
+			switch output {
+			case "json":
+				return printJSON(media)
+			case "csv":
+				return printCSV(media)
+			default:
+				charm.PrintReport(media, includeZero)
+			}
+
 			return nil
 		},
 	}

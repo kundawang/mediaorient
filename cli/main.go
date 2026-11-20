@@ -18,7 +18,7 @@ func main() {
 	}
 
 	if err := mediaorient.Initialize("mediaorirent", onDownload); err != nil {
-		charm.PrintError(fmt.Sprintf("Failed to initialize media orientation detection: %v\n", err))
+		charm.PrintError("Failed to initialize media orientation detection: %v\n", err)
 		return
 	}
 	defer mediaorient.Destroy()
@@ -30,6 +30,6 @@ func main() {
 	cmd := buildCliCommands()
 
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		charm.PrintError(err.Error())
+		charm.PrintError("%s", err.Error())
 	}
 }
